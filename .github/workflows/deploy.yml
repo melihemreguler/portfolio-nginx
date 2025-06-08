@@ -27,8 +27,8 @@ jobs:
 
           echo "LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}" > .env
 
-          # Stop system services that might conflict with ports
-          sudo systemctl stop nginx apache2 2>/dev/null || true
+          # Restart the compose stack
+          docker compose down 2>/dev/null || true
 
           git pull origin main
           docker compose pull
