@@ -23,14 +23,45 @@ jobs:
     - name: Deploy to EC2
       run: |
         ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          # Check if Docker is installed
+          if ! command -v docker &> /dev/null; then
+            echo "Docker is not installed. Installing Docker..."
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker $USER
+            echo "Docker installed. Please re-run the deployment after logging out and back in."
+            exit 1
+          fi
+
+          # Check if Docker Compose is installed
+          if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+            echo "Docker Compose is not installed. Installing Docker Compose..."
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+
+          # Clone repository if it doesn't exist (for initial setup)
+          if [ ! -d "~/portfolio-nginx" ]; then
+            echo "Repository not found. Cloning repository..."
+            git clone https://github.com/${{ github.repository }}.git ~/portfolio-nginx
+          fi
+
           cd ~/portfolio-nginx
 
+          # Pull latest changes
+          git pull origin main
+
+          # Create necessary directories
+          mkdir -p ~/portfolio-nginx/letsencrypt
+          mkdir -p ~/portfolio-nginx/logs
+
+          # Create environment file
           echo "LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}" > .env
 
           # Restart the compose stack
           docker compose down 2>/dev/null || true
-
-          git pull origin main
           docker compose pull
           docker compose up -d
+
+          echo "Deployment completed successfully!"
         EOF
