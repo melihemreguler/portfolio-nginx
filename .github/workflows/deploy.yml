@@ -59,7 +59,7 @@ jobs:
           git pull origin main
 
           # Create necessary directories
-          mkdir -p ./letsencrypt ./logs
+          mkdir -p ./letsencrypt ./logs ./certs ./html
 
           # Create environment file
           echo "LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}" > .env
@@ -68,6 +68,16 @@ jobs:
           docker compose down || true
           docker compose pull
           docker compose up -d
+
+          # Wait for containers to start
+          sleep 10
+
+          # Show container status and check for SSL certificate generation
+          echo "Container status:"
+          docker ps
+          echo ""
+          echo "Checking Let's Encrypt logs:"
+          docker logs nginx-letsencrypt --tail 20
 
           echo "✅ Deployment completed successfully!"
         EOF
