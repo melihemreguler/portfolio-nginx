@@ -59,25 +59,35 @@ jobs:
           git pull origin main
 
           # Create necessary directories
-          mkdir -p ./letsencrypt ./logs ./certs ./html
+          mkdir -p ./certs ./html ./letsencrypt ./logs
+          chmod 755 ./certs ./html
 
           # Create environment file
           echo "LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}" > .env
 
-          # Restart Docker Compose stack
+          # Stop existing containers (if running)
           docker compose down || true
+
+          # Clean old certs and webroot content
+          sudo rm -rf ./certs/*
+          sudo rm -rf ./html/*
+
+          # Pull and start containers fresh
           docker compose pull
           docker compose up -d
 
-          # Wait for containers to start
-          sleep 10
+          echo "Waiting for containers to initialize..."
+          sleep 30
 
-          # Show container status and check for SSL certificate generation
-          echo "Container status:"
-          docker ps
-          echo ""
-          echo "Checking Let's Encrypt logs:"
-          docker logs nginx-letsencrypt --tail 20
+          # Force certificate generation
+          echo "Forcing SSL certificate generation..."
+          docker exec nginx-letsencrypt /app/signal_le_service
 
-          echo "✅ Deployment completed successfully!"
+          echo "Waiting for certificate generation..."
+          sleep 30
+
+          # Tail nginx-letsencrypt logs for SSL status
+          docker logs nginx-letsencrypt --tail 50
+
+          echo "Deployment and SSL fix completed successfully!"
         EOF
