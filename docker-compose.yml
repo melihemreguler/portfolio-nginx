@@ -30,4 +30,4 @@ services:
 
 networks:
   web:
-    driver: bridge
+    external: true
